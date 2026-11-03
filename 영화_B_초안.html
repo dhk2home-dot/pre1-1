@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>나의 영화 티어리스트</title>
+<style>
+:root{--bg:#f5f7fb;--panel:#fff;--ink:#202638;--muted:#7b8497;--line:#e7eaf1;--accent:#5968d8;--accent-soft:#eef0ff;--shadow:0 8px 28px rgba(34,45,80,.07)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",sans-serif}
+button,input{font:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding:34px 22px 60px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;margin-bottom:26px}
+.eyebrow{font-size:12px;font-weight:800;letter-spacing:.12em;color:var(--accent);margin-bottom:8px}
+h1{font-size:clamp(25px,4vw,36px);letter-spacing:-.05em;margin:0}
+.sub{color:var(--muted);font-size:14px;margin:9px 0 0}
+.count{font-size:13px;color:var(--muted);white-space:nowrap}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow);margin-bottom:22px}
+.add-row{display:flex;gap:10px}
+input{min-width:0;flex:1;border:1px solid var(--line);border-radius:11px;padding:13px 14px;outline:none;background:#fff;color:var(--ink)}
+input:focus{border-color:var(--accent);box-shadow:0 0 0 3px #5968d81c}
+button{border:0;border-radius:11px;padding:12px 17px;font-weight:700;cursor:pointer;transition:.15s}
+button:active{transform:scale(.98)}
+.primary{background:var(--accent);color:#fff}
+.secondary{background:var(--accent-soft);color:var(--accent)}
+.ghost{background:transparent;color:var(--muted);padding:8px 10px}
+.ghost:hover{background:#f1f3f8;color:var(--ink)}
+.tier-tools{display:flex;align-items:center;justify-content:space-between;margin:0 2px 13px}
+.tier-tools strong{font-size:15px}
+.tier-tools span{font-size:12px;color:var(--muted)}
+.tiers{display:flex;flex-direction:column;gap:13px}
+.tier{display:grid;grid-template-columns:92px 1fr;gap:13px;align-items:stretch}
+.tier-label{border-radius:15px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:112px;background:var(--tier-bg);color:var(--tier-color);padding:10px}
+.tier-name{font-size:23px;font-weight:900;letter-spacing:-.04em;max-width:100%;overflow-wrap:anywhere;text-align:center}
+.tier-count{font-size:11px;opacity:.75}
+.tier-actions{display:flex;gap:2px}
+.tier-actions button{font-size:12px;padding:5px 7px;color:inherit;background:transparent;opacity:.75}
+.dropzone{min-height:112px;border:1px dashed #dfe3ed;border-radius:15px;padding:12px;display:flex;align-content:flex-start;align-items:flex-start;gap:9px;flex-wrap:wrap;background:#fbfcfe;transition:.15s}
+.dropzone.over{border:2px dashed var(--accent);background:#f1f2ff}
+.empty{color:#a0a7b5;font-size:13px;padding:8px 4px}
+.movie{display:flex;align-items:center;gap:9px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:9px 10px 9px 12px;box-shadow:0 2px 7px #26304a08;max-width:100%;cursor:grab;touch-action:pan-y;user-select:none}
+.movie.dragging{opacity:.35}
+.movie-title{font-size:14px;font-weight:650;overflow-wrap:anywhere}
+.grip{color:#b0b6c4;font-size:16px;cursor:grab}
+.remove{border:0;background:transparent;color:#aab0bd;padding:2px 3px;font-size:17px;line-height:1}
+.remove:hover{color:#d34f62}
+.footer{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px;color:var(--muted);font-size:12px}
+#toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,15px);background:#252b3b;color:#fff;padding:10px 15px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:.2s;z-index:20}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+@media(max-width:600px){
+ .wrap{padding:25px 14px 42px}header{align-items:flex-start;flex-direction:column;margin-bottom:20px}.panel{padding:13px}
+ .add-row{gap:7px}.add-row button{padding:11px 13px}
+ .tier{grid-template-columns:66px 1fr;gap:8px}.tier-label{min-height:105px;border-radius:12px}.tier-name{font-size:19px}
+ .dropzone{min-height:105px;padding:8px;gap:7px}.movie{padding:9px}.movie-title{font-size:13px}
+ .tier-actions{flex-direction:column}.tier-actions button{padding:2px 5px}
+ .footer{align-items:flex-start;flex-direction:column}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+ <div><div class="eyebrow">MY MOVIE COLLECTION</div><h1>나의 영화 티어리스트</h1><p class="sub">내가 본 영화, 나만의 기준으로 정리하기</p></div>
+ <div class="count" id="totalCount">영화 0편 · 티어 4개</div>
+</header>
+<section class="panel" aria-label="영화 추가">
+ <form class="add-row" id="addForm">
+  <input id="movieInput" type="text" maxlength="100" placeholder="영화 제목을 입력하세요" aria-label="영화 제목" autocomplete="off">
+  <button class="primary" type="submit">영화 추가</button>
+ </form>
+</section>
+<div class="tier-tools"><strong>나의 티어</strong><span>영화를 끌어 다른 티어로 옮겨보세요</span></div>
+<main class="tiers" id="tiers"></main>
+<div class="footer"><span>이 목록은 현재 브라우저에 자동 저장됩니다.</span><button class="secondary" id="addTier">＋ 티어 추가</button></div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+(() => {
+ const KEY='myMovieTierList_v1';
+ const palette=[['#fff0e8','#bd673b'],['#fff7dc','#a47a20'],['#eaf5ff','#477eaf'],['#edf7ee','#4c8957'],['#f3edff','#7958ad'],['#ffedf3','#ad5878']];
+ const defaults=[
+  {id:'s',name:'S',movies:[]},{id:'a',name:'A',movies:[]},
+  {id:'b',name:'B',movies:[]},{id:'c',name:'C',movies:[]}
+ ];
+ let state=load();
+ const $=s=>document.querySelector(s);
+ function uid(){return 't'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+ function load(){
+  try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&Array.isArray(v.tiers)&&v.tiers.length)return v}catch(e){}
+  return {tiers:defaults.map(t=>({...t}))};
+ }
+ function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){toast('저장 공간을 사용할 수 없어요.')}}
+ function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove('show'),2100)}
+ function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+ function render(){
+  const root=$('#tiers');root.innerHTML='';
+  let total=0;
+  state.tiers.forEach((tier,index)=>{
+   total+=tier.movies.length;
+   const [bg,color]=palette[index%palette.length];
+   const section=document.createElement('section');section.className='tier';section.dataset.tier=tier.id;
+   section.innerHTML=`
+    <div class="tier-label" style="--tier-bg:${bg};--tier-color:${color}">
+     <div class="tier-name">${escapeHTML(tier.name)}</div>
+     <div class="tier-count">${tier.movies.length}편</div>
+     <div class="tier-actions">
+      <button type="button" data-action="rename" title="티어 이름 변경" aria-label="${escapeHTML(tier.name)} 이름 변경">이름</button>
+      <button type="button" data-action="delete" title="티어 삭제" aria-label="${escapeHTML(tier.name)} 티어 삭제">삭제</button>
+     </div>
+    </div>
+    <div class="dropzone" data-drop="${tier.id}" aria-label="${escapeHTML(tier.name)} 티어 영화 목록">
+     ${tier.movies.length?tier.movies.map(m=>`<div class="movie" draggable="true" data-movie="${m.id}" data-from="${tier.id}"><span class="grip" aria-hidden="true">⠿</span><span class="movie-title">${escapeHTML(m.title)}</span><button class="remove" type="button" data-remove="${m.id}" aria-label="${escapeHTML(m.title)} 삭제" title="영화 삭제">×</button></div>`).join(''):'<div class="empty">여기에 영화를 놓으세요</div>'}
+    </div>`;
+   root.appendChild(section);
+  });
+  $('#totalCount').textContent=`영화 ${total}편 · 티어 ${state.tiers.length}개`;
+ }
+ function addMovie(title){
+  title=title.trim();if(!title)return;
+  if(state.tiers.some(t=>t.movies.some(m=>m.title.toLowerCase()===title.toLowerCase()))){toast('이미 목록에 있는 영화예요.');return}
+  state.tiers[0].movies.push({id:uid(),title});save();render();$('#movieInput').value='';toast('영화를 추가했어요.');
+ }
+ $('#addForm').addEventListener('submit',e=>{e.preventDefault();addMovie($('#movieInput').value);});
+ $('#addTier').addEventListener('click',()=>{
+  const name=prompt('새 티어 이름을 입력하세요.','NEW');if(name===null)return;
+  if(!name.trim()){toast('티어 이름을 입력해 주세요.');return}
+  state.tiers.push({id:uid(),name:name.trim().slice(0,20),movies:[]});save();render();
+ });
+ $('#tiers').addEventListener('click',e=>{
+  const action=e.target.closest('[data-action]');
+  if(action){
+   const section=action.closest('.tier'),tier=state.tiers.find(t=>t.id===section.dataset.tier);
+   if(action.dataset.action==='rename'){
+    const name=prompt('티어 이름을 변경하세요.',tier.name);
+    if(name!==null&&name.trim()){tier.name=name.trim().slice(0,20);save();render()}
+   }else{
+    if(state.tiers.length===1){toast('티어는 최소 1개가 필요해요.');return}
+    if(tier.movies.length&&!confirm(`'${tier.name}' 티어와 안에 있는 영화 ${tier.movies.length}편을 삭제할까요?`))return;
+    if(!tier.movies.length&&!confirm(`'${tier.name}' 티어를 삭제할까요?`))return;
+    state.tiers=state.tiers.filter(t=>t.id!==tier.id);save();render();
+   }
+   return;
+  }
+  const remove=e.target.closest('[data-remove]');
+  if(remove){
+   const id=remove.dataset.remove;
+   state.tiers.forEach(t=>t.movies=t.movies.filter(m=>m.id!==id));save();render();
+  }
+ });
+ function moveMovie(movieId,targetId){
+  let movie=null;
+  state.tiers.forEach(t=>{const i=t.movies.findIndex(m=>m.id===movieId);if(i>=0)movie=t.movies.splice(i,1)[0]});
+  const target=state.tiers.find(t=>t.id===targetId);
+  if(movie&&target){target.movies.push(movie);save();render()}
+ }
+ let dragged=null;
+ $('#tiers').addEventListener('dragstart',e=>{
+  const card=e.target.closest('.movie');if(!card)return;
+  dragged=card.dataset.movie;card.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',dragged);
+ });
+ $('#tiers').addEventListener('dragend',e=>{const card=e.target.closest('.movie');if(card)card.classList.remove('dragging');document.querySelectorAll('.dropzone').forEach(z=>z.classList.remove('over'));dragged=null});
+ $('#tiers').addEventListener('dragover',e=>{const zone=e.target.closest('.dropzone');if(!zone)return;e.preventDefault();zone.classList.add('over');e.dataTransfer.dropEffect='move'});
+ $('#tiers').addEventListener('dragleave',e=>{const zone=e.target.closest('.dropzone');if(zone&&!zone.contains(e.relatedTarget))zone.classList.remove('over')});
+ $('#tiers').addEventListener('drop',e=>{
+  const zone=e.target.closest('.dropzone');if(!zone)return;e.preventDefault();zone.classList.remove('over');
+  const id=e.dataTransfer.getData('text/plain')||dragged;if(id)moveMovie(id,zone.dataset.drop);
+ });
+ // 터치 화면에서는 영화를 길게 눌러 끌어 옮길 수 있어요.
+ let touch=null;
+ $('#tiers').addEventListener('pointerdown',e=>{
+  if(e.pointerType==='mouse')return;
+  const card=e.target.closest('.movie');if(!card||e.target.closest('button'))return;
+  touch={id:card.dataset.movie,x:e.clientX,y:e.clientY,started:false,card};
+  touch.timer=setTimeout(()=>{if(!touch)return;touch.started=true;card.classList.add('dragging');},220);
+ });
+ $('#tiers').addEventListener('pointermove',e=>{
+  if(!touch)return;
+  if(!touch.started){if(Math.abs(e.clientY-touch.y)>12||Math.abs(e.clientX-touch.x)>12){clearTimeout(touch.timer);touch=null}return}
+  e.preventDefault();
+  document.querySelectorAll('.dropzone').forEach(z=>z.classList.toggle('over',z.getBoundingClientRect().top<=e.clientY&&z.getBoundingClientRect().bottom>=e.clientY&&z.getBoundingClientRect().left<=e.clientX&&z.getBoundingClientRect().right>=e.clientX));
+ });
+ function endTouch(e){
+  if(!touch)return;clearTimeout(touch.timer);
+  if(touch.started){
+   const el=document.elementFromPoint(e.clientX,e.clientY),zone=el&&el.closest('.dropzone');
+   if(zone)moveMovie(touch.id,zone.dataset.drop);
+   else touch.card.classList.remove('dragging');
+   document.querySelectorAll('.dropzone').forEach(z=>z.classList.remove('over'));
+  }
+  touch=null;
+ }
+ $('#tiers').addEventListener('pointerup',endTouch);
+ $('#tiers').addEventListener('pointercancel',()=>{if(touch){clearTimeout(touch.timer);touch.card.classList.remove('dragging');touch=null}});
+ render();
+})();
+</script>
+</body>
+</html>
